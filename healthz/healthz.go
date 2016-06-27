@@ -25,7 +25,7 @@ type handler struct {
 }
 
 func Handler(hc *Config) (http.Handler, error) {
-	mc, err := NewDatabaseChecker(hc.Database.DriverName, hc.Database.DataSourceName)
+	dc, err := NewDatabaseChecker(hc.Database.DriverName, hc.Database.DataSourceName)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	statusCode := http.StatusOK
 	errors := make([]Error, 0)
 
-	err = h.dc.Ping()
+	err := h.dc.Ping()
 	if err != nil {
 		errors = append(errors, Error{
 			Type:        "DatabasePing",

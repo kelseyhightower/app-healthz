@@ -6,20 +6,20 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-type MySQLChecker struct {
+type DatabaseChecker struct {
 	db *sql.DB
 }
 
-func NewMySQLChecker(driverName, dataSourceName string) (*MySQLChecker, error) {
+func NewDatabaseChecker(driverName, dataSourceName string) (*DatabaseChecker, error) {
 	db, err := sql.Open(driverName, dataSourceName)
 	if err != nil {
 		return nil, err
 	}
-	return &MySQLChecker{db}, nil
+	return &DatabaseChecker{db}, nil
 }
 
-func (mc *MySQLChecker) Ping() error {
-	err := mc.db.Ping()
+func (dc *DatabaseChecker) Ping() error {
+	err := dc.db.Ping()
 	if err != nil {
 		return err
 	}
