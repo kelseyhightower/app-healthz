@@ -11,36 +11,24 @@ import (
 type Config struct {
 	Hostname string
 	Database DatabaseConfig
-	Vault    VaultConfig
 }
 
 type DatabaseConfig struct {
 	DriverName     string
 	DataSourceName string
-	DatabaseName   string
-	Tables         []string
-}
-
-type VaultConfig struct {
-	Address string
 }
 
 type handler struct {
-	mc           *MySQLChecker
-	vc           *VaultChecker
-	databaseName string
-	hostname     string
-	metadata     map[string]string
-	tables       []string
+	dc       *DatabaseChecker
+	hostname string
+	metadata map[string]string
 }
 
 func Handler(hc *Config) (http.Handler, error) {
-	mc, err := NewMySQLChecker(hc.Database.DriverName, hc.Database.DataSourceName)
+	mc, err := NewDatabaseChecker(hc.Database.DriverName, hc.Database.DataSourceName)
 	if err != nil {
 		return nil, err
 	}
-
-	vc := NewVaultChecker(hc.Vault.Address)
 
 	config, err := mysql.ParseDSN(hc.Database.DataSourceName)
 	if err != nil {
@@ -50,9 +38,8 @@ func Handler(hc *Config) (http.Handler, error) {
 	metadata := make(map[string]string)
 	metadata["database_url"] = config.Addr
 	metadata["database_user"] = config.User
-	metadata["vault_address"] = hc.Vault.Address
 
-	h := &handler{mc, vc, hc.Database.DatabaseName, hc.Hostname, metadata, hc.Database.Tables}
+	h := &handler{dc, hc.Hostname, metadata}
 	return h, nil
 }
 
@@ -76,40 +63,15 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	statusCode := http.StatusOK
-
 	errors := make([]Error, 0)
 
-	err := h.vc.Ping()
-	if err != nil {
-		errors = append(errors, Error{
-			Type:        "VaultPing",
-			Description: "Vault liveliness check.",
-			Error:       err.Error(),
-		})
-	}
-
-	err = h.mc.Ping()
+	err = h.dc.Ping()
 	if err != nil {
 		errors = append(errors, Error{
 			Type:        "DatabasePing",
-			Description: "Database liveliness check.",
+			Description: "Database health check.",
 			Error:       err.Error(),
 		})
-	}
-
-	for _, table := range h.tables {
-		err = h.mc.TableExist(h.databaseName, table)
-		if err != nil {
-			metadata := make(map[string]string)
-			metadata["table_name"] = table
-
-			errors = append(errors, Error{
-				Type:        "DatabaseTableExist",
-				Description: "Database table exist check.",
-				Error:       err.Error(),
-				Metadata:    metadata,
-			})
-		}
 	}
 
 	response.Errors = errors

@@ -1,28 +1,26 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/kelseyhightower/app-healthz/healthz"
 )
 
-var (
-	dataSourceName string
-	databaseName   string
-	healthAddr     string
-	tables         string
-	vaultAddr      string
-)
+var version = "1.0.0"
 
 func main() {
-	dataSourceName := os.Getenv("DATA_SOURCE_NAME")
+	httpAddr := os.Getenv("HTTP_ADDR")
+
+	databaseUsername := os.Getenv("DATABASE_USERNAME")
+	databasePassword := os.Getenv("DATABASE_PASSWORD")
+	databaseHost := os.Getenv("DATABASE_HOST")
 	databaseName := os.Getenv("DATABASE_NAME")
-	healthAddr := os.Getenv("HEALTH_ADDR")
-	tables := os.Getenv("DATABASE_TABLES")
-	vaultAddr := os.Getenv("VAULT_ADDRESS")
+
+	dataSourceName := fmt.Sprintf("%s:%s@tcp(%s)/%s",
+		databaseUsername, databasePassword, databaseHost, databaseName)
 
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -34,11 +32,6 @@ func main() {
 		Database: healthz.DatabaseConfig{
 			DriverName:     "mysql",
 			DataSourceName: dataSourceName,
-			DatabaseName:   databaseName,
-			Tables:         strings.Split(tables, ","),
-		},
-		Vault: healthz.VaultConfig{
-			Address: vaultAddr,
 		},
 	}
 
@@ -48,5 +41,8 @@ func main() {
 	}
 
 	http.Handle("/healthz", healthzHandler)
-	http.ListenAndServe(healthAddr, nil)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, html, hostname, version)
+	})
+	http.ListenAndServe(httpAddr, nil)
 }
