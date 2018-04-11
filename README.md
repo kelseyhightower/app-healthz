@@ -2,6 +2,8 @@
 
 app-healthz is a sample app that demonstrates how to leverage the health endpoint pattern.
 
+Related conference video: https://vimeo.com/173610242
+
 ## Create Docker Image
 
 Build the go binary
